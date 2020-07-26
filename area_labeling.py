@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def init_globals():
     global img, n, labels, newlabels, haschanged, parties, barrier, isfinished
-    n = 16
+    n = 7
     img = [[randint(0, 1) for _ in range(n)] for _ in range(n)]
     labels = [[i * n + j + 1 for j in range(n)] for i in range(n)]
     newlabels = [[None for j in range(n)] for i in range(n)]
@@ -49,7 +49,7 @@ def copy_labels(i0: int, bias: int):
         for j in range(n):
             labels[i][j] = newlabels[i][j]
 
-def find_labels_for_area(thread_id: int, i0: int, bias: int):
+def find_new_labels(thread_id: int, i0: int, bias: int):
     for i in range(i0, i0 + bias):
         for j in range(n):
             neighbors_labels = get_neighbors_labels(i, j)
@@ -64,24 +64,14 @@ def find_labels_for_area(thread_id: int, i0: int, bias: int):
                 newlabels[i][j] = labels[i][j]
                 haschanged[i][j] = False
 
+
+def find_area_labels(thread_id: int, i0: int, bias: int):
+    find_new_labels(thread_id, i0, bias)
     barrier.wait()
     copy_labels(i0, bias)
     barrier.wait()
-
     while not is_finished(thread_id, i0, bias):
-        for i in range(i0, i0 + bias):
-            for j in range(n):
-                neighbors_labels = get_neighbors_labels(i, j)
-                if len(neighbors_labels) > 0:
-                    newlabels[i][j] = max(*neighbors_labels,
-                                               labels[i][j])
-                    if newlabels[i][j] != labels[i][j]:
-                        haschanged[i][j] = True
-                    else:
-                        haschanged[i][j] = False
-                else:
-                    newlabels[i][j] = labels[i][j]
-                    haschanged[i][j] = False
+        find_new_labels(thread_id, i0, bias)
         barrier.wait()
         copy_labels(i0, bias)
         barrier.wait()
@@ -96,7 +86,7 @@ def find_labels():
     for j in range(parties):
         if j == parties - 1:
             bias += remainder
-        threads[j] = Thread(target=find_labels_for_area,
+        threads[j] = Thread(target=find_area_labels,
                             args=(j, i0, bias))
         threads[j].start()
         i0 += bias
