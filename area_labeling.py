@@ -3,6 +3,11 @@ from os import cpu_count
 from random import randint
 import matplotlib.pyplot as plt
 
+# An array of integers img[1:n, 1:n] is given. The value of each element is the intensity of the pixel.
+# Two neighboring pixels belong to the region if their values ​​are equal. 
+# The challenge is to find all areas and assign a unique label to all pixels in the area.
+
+
 def init_globals():
     global img, n, labels, newlabels, haschanged, parties, barrier, isfinished
     n = 7
@@ -97,13 +102,13 @@ def find_labels():
 if __name__ == '__main__':
     init_globals()
     find_labels()
-    f, axarr = plt.subplots(nrows=1, ncols=1)
-    axarr.imshow(img)
+    # f, axarr = plt.subplots(nrows=1, ncols=1)
+    # axarr.imshow(img)
 
 
-    for i in range(n):
-        for j in range(n):
-            print(labels[i][j], end=' ')
-        print()
+    # for i in range(n):
+    #     for j in range(n):
+    #         print(labels[i][j], end=' ')
+    #     print()
 
-    plt.show()
+    # plt.show()
