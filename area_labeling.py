@@ -102,13 +102,3 @@ def find_labels():
 if __name__ == '__main__':
     init_globals()
     find_labels()
-    # f, axarr = plt.subplots(nrows=1, ncols=1)
-    # axarr.imshow(img)
-
-
-    # for i in range(n):
-    #     for j in range(n):
-    #         print(labels[i][j], end=' ')
-    #     print()
-
-    # plt.show()
