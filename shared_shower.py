@@ -2,7 +2,9 @@ from threading import Semaphore, Thread
 from time import sleep
 from random import randint
 
-N = 4              # threads num
+N = 5               # threads num
+M = N // 2 + N % 2  # number of men
+W = N // 2          # number of women
 
 nm = 0              # number of men in shower
 nw = 0              # number of women in shower
@@ -33,22 +35,26 @@ def man():
             e.release()
             m.acquire()
         nm += 1
+        if nm == M:
+            turn = 'W'
         print('nw = %d, nm = %d' % (nw, nm))
         if dm > 0:
             dm -= 1
             m.release()
         else:
             e.release()
-        sleep(2)
+        sleep(1)
 
         e.acquire()
         nm -= 1
-        if nm == 0:
-            turn = 'W'
+        print('nw = %d, nm = %d' % (nw, nm))
 
         if nm == 0 and dw > 0:
             dw -= 1
             w.release()
+        elif dm > 0 and turn == 'M':
+            dm -= 1
+            m.release()
         else:
             e.release()
 
@@ -62,23 +68,27 @@ def woman():
             e.release()
             w.acquire()
         nw += 1
+        if nw == W:
+            turn = 'M'
         print('nw = %d, nm = %d' % (nw, nm))
         if dw > 0:
             dw -= 1
             w.release()
         else:
             e.release()
-        sleep(3)
+
+        sleep(1)
 
         e.acquire()
         nw -= 1
-
-        if nw == 0:
-            turn = 'M'
+        print('nw = %d, nm = %d' % (nw, nm))
 
         if nw == 0 and dm > 0:
             dm -= 1
             m.release()
+        elif dw > 0 and turn == 'W':
+            dw -= 1
+            w.release()
         else:
             e.release()
 
@@ -96,32 +106,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-# process Man
-#     set_turn(M)
-#     while true
-#         P(e)
-#         if nw > 0 or turn == W:
-#             ++dm
-#             V(e)
-#             P(m)
-        
-#         ++nm
-#         // turn == M and nw == 0 -> 
-#         if dm > 0
-#             --dm
-#             V(m)
-#         else
-#             V(e)
-
-#         taking shower...
-
-#         P(e)
-#         --nm
-#         if nm == 0 and dw > 0
-#             turn = W
-#             --dw
-#             V(w)
-#         else:
-#             V(e)
