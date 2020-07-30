@@ -20,10 +20,13 @@ public:
 
     void acquire()
     {
-        int prev;
+        int prev, tmp;
         while (true)
         {
-            while (_s  == 0);
+            await_loop:
+                tmp = _s.load();
+                if (tmp == 0)
+                    goto await_loop;
             prev = atomic_fetch_add(&_s, -1);
             if (prev < 0) 
             {
@@ -52,6 +55,7 @@ void producer()
     {
         empty.acquire();
         buff = i;
+        cout << "Produced: " << i << endl;
         full.release();
     }
 }
@@ -63,8 +67,8 @@ void consumer()
     {
         full.acquire();
         data = buff;
+        cout << "Consumed: " << data << endl;
         empty.release();
-        cout << data << endl;
     }
 }
 
