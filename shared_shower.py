@@ -2,7 +2,15 @@ from threading import Semaphore, Thread
 from time import sleep
 from random import randint
 
-N = 5               # threads num
+# Suppose the dorm has a shower room that can be used by men and women, 
+# but not at the same time: define a global invariant, 
+# then design a solution using semaphores to synchronize.
+# BAD: (nm > 0 && turn == 'W') || (nw > 0 && turn == 'M')
+# GOOD: (nm == 0 || turn == 'M') && (nw == 0 || turn == 'W') =
+#       (nm == 0 && nw == 0) || (nm == 0 && turn == 'W') ||
+#       (nw == 0 && turn == 'M')
+
+N = 6               # threads num
 M = N // 2 + N % 2  # number of men
 W = N // 2          # number of women
 
