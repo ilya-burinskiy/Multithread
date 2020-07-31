@@ -23,10 +23,7 @@ public:
         int prev, tmp;
         while (true)
         {
-            await_loop:
-                tmp = _s.load();
-                if (tmp == 0)
-                    goto await_loop;
+            while (!_s.load());
             prev = atomic_fetch_add(&_s, -1);
             if (prev < 0) 
             {
