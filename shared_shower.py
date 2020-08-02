@@ -31,60 +31,103 @@ dw = 0              # number of suspended women
 dsm = 0             # number of man who took a shower
 dsw = 0             # nubmer of woman who took a shower
 
+def man_wants_to_enter():
+    global nm, nw, turn, e, m, w, sm, sw, dm, dw, dsm, dsw
+    e.acquire()
+    if nw > 0 or turn == 'W' or nm == MAX_COUNT:
+        dm += 1
+        e.release()
+        m.acquire()
+
+def signal_1man():
+    global dm, m
+    dm -= 1
+    m.release()
+
+def signal_1sman():
+    global dsm, sm, e
+    dsm -= 1
+    sm.release()
+    e.release()
+
+def man_leaves():
+    global e, nm, dsm, dw, dsw, turn
+    e.acquire()
+    nm -= 1
+    dsm += 1
+    if nm == 0:
+        if dw > 0:
+            signal_1woman()
+        elif dsw > 0:
+            signal_1swoman()
+    elif turn == 'M':
+        if dm > 0:
+            signal_1man()
+        elif dsm > 0:
+            signal_1sman()
+    else:
+        e.release()
+
+def woman_wants_to_enter():
+    global nm, nw, turn, e, m, w, sm, sw, dm, dw, dsm, dsw
+    e.acquire()
+    if nm > 0 or turn == 'M' or nw == MAX_COUNT:
+        dw += 1
+        e.release()
+        w.acquire()
+
+def signal_1woman():
+    global dw, w
+    dw -= 1
+    w.release()
+
+def signal_1swoman():
+    global dsw, sw, e
+    dsw -= 1
+    sw.release()
+    e.release()
+
+def woman_leaves():
+    global nw, dw, dsw, dm, dsm, e
+    nw -= 1
+    dsw += 1
+
+    if nw == 0:
+        if dm > 0:
+            signal_1man()
+        elif dsm > 0:
+            signal_1sman()
+    elif turn == 'W':
+        if dw > 0:
+            signal_1woman()
+        elif dsw > 0:
+            signal_1swoman()
+    else:
+        e.release()
+
+
 def man(id_):
     global nm, nw, turn, e, m, w, sm, sw, dm, dw, dsm, dsw
 
     while True:
 
-        # Enter protocol
-        e.acquire()
-        if nw > 0 or turn == 'W' or nm == MAX_COUNT:
-            dm += 1
-            e.release()
-            m.acquire()
+        man_wants_to_enter()
+
         nm += 1
         if nm == min(MAX_COUNT, M):
             turn = 'W'
         print('nw: %d nm: %d id: %d' % (nw, nm, id_))
 
-        # SIGNAL
         if dm > 0 and nm < MAX_COUNT:
-            dm -= 1
-            m.release()
+            signal_1man()
         elif dsm > 0 and nm < MAX_COUNT:
-            dsm -= 1
-            sm.release()
-            e.release()
+            signal_1sman()
         else:
             e.release()
 
-        # Showering
         sleep(1)
 
-        # Exit protocol
-        e.acquire()
-        nm -= 1
-        dsm += 1
-        # print('nw: %d nm: %d id: %d' % (nw, nm, id_))
-        if nm == 0:
-            if dw > 0:
-                dw -= 1
-                w.release()
-            elif dsw > 0:
-                dsw -= 1
-                sw.release()
-                e.release()
-        elif turn == 'M':
-            if dm > 0 and nm < MAX_COUNT:
-                dm -= 1
-                m.release()
-            elif dsm > 0 and nm < MAX_COUNT:
-                dsm -= 1
-                sm.release()
-                e.release()
-        else:
-            e.release()
-        
+        man_leaves()
         sm.acquire()
 
 def woman(id_):
@@ -92,56 +135,23 @@ def woman(id_):
 
     while True:
 
-        # Enter protocol
-        e.acquire()
-        if nm > 0 or turn == 'M' or nw == MAX_COUNT:
-            dw += 1
-            e.release()
-            w.acquire()
+        woman_wants_to_enter()
+
         nw += 1
         if nw == min(MAX_COUNT, W):
             turn = 'M'
         print('nw: %d nm: %d id: %d' % (nw, nm, id_))
 
-        # SIGNAL
         if dw > 0 and nw < MAX_COUNT:
-            dw -= 1
-            w.release()
+            signal_1woman()
         elif dsw > 0 and nw < MAX_COUNT:
-            dsw -= 1
-            sw.release()
-            e.release()
+            signal_1swoman()
         else:
             e.release()
 
-        # Showering
         sleep(1)
 
-        # Exit protocol
-        e.acquire()
-        nw -= 1
-        dsw += 1
-        # print('nw: %d nm: %d id: %d' % (nw, nm, id_))
-
-        if nw == 0:
-            if dm > 0:
-                dm -= 1
-                m.release()
-            elif dsm > 0:
-                dsm -= 1
-                sm.release()
-                e.release()
-        elif turn == 'W':
-            if dw > 0 and nw < MAX_COUNT:
-                dw -= 1
-                w.release()
-            elif dsw > 0 and nw < MAX_COUNT:
-                dsw -= 1
-                sw.release()
-                e.release()
-        else:
-            e.release()
-        
+        woman_leaves() 
         sw.acquire()
 
 def main():
