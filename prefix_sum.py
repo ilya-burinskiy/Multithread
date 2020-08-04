@@ -36,6 +36,8 @@ def calc_sum2():
     start = 0
     end = N // K
     for i in range(K):
+        if i == K - 1:
+            end += N % K
         threads[i] = Thread(target=subarray_sum, args=(start, end)) 
         start = end
         end = end + N // K
