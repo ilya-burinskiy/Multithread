@@ -34,7 +34,7 @@ dsw = 0             # nubmer of woman who took a shower
 def man_wants_to_enter():
     global nm, nw, turn, e, m, w, sm, sw, dm, dw, dsm, dsw
     e.acquire()
-    if nw > 0 or turn == 'W' or nm == MAX_COUNT:
+    if turn == 'W' or nm == MAX_COUNT:
         dm += 1
         e.release()
         m.acquire()
@@ -56,22 +56,18 @@ def man_leaves():
     nm -= 1
     dsm += 1
     if nm == 0:
+        turn = 'W'
         if dw > 0:
             signal_1woman()
         elif dsw > 0:
             signal_1swoman()
-    elif turn == 'M':
-        if dm > 0:
-            signal_1man()
-        elif dsm > 0:
-            signal_1sman()
     else:
         e.release()
 
 def woman_wants_to_enter():
     global nm, nw, turn, e, m, w, sm, sw, dm, dw, dsm, dsw
     e.acquire()
-    if nm > 0 or turn == 'M' or nw == MAX_COUNT:
+    if turn == 'M' or nw == MAX_COUNT:
         dw += 1
         e.release()
         w.acquire()
@@ -88,20 +84,16 @@ def signal_1swoman():
     e.release()
 
 def woman_leaves():
-    global nw, dw, dsw, dm, dsm, e
+    global nw, dw, dsw, dm, dsm, e, turn
     nw -= 1
     dsw += 1
 
     if nw == 0:
+        turn = 'M'
         if dm > 0:
             signal_1man()
         elif dsm > 0:
             signal_1sman()
-    elif turn == 'W':
-        if dw > 0:
-            signal_1woman()
-        elif dsw > 0:
-            signal_1swoman()
     else:
         e.release()
 
@@ -114,8 +106,6 @@ def man(id_):
         man_wants_to_enter()
 
         nm += 1
-        if nm == min(MAX_COUNT, M):
-            turn = 'W'
         print('nw: %d nm: %d id: %d' % (nw, nm, id_))
 
         if dm > 0 and nm < MAX_COUNT:
@@ -138,8 +128,6 @@ def woman(id_):
         woman_wants_to_enter()
 
         nw += 1
-        if nw == min(MAX_COUNT, W):
-            turn = 'M'
         print('nw: %d nm: %d id: %d' % (nw, nm, id_))
 
         if dw > 0 and nw < MAX_COUNT:
