@@ -9,7 +9,7 @@ using namespace std;
 
 char turn;
 const int MAX = 2;
-const int N   = 8;
+const int N   = 7;
 const int M   = N / 2 + N % 2;
 const int W   = N / 2;
 
@@ -28,7 +28,6 @@ void man_wants_to_enter(int id)
     unique_lock<mutex> lk(e);
     if (turn == 'W' || nm == MAX) {
         ++dm;
-        // m.wait(lk, []{return turn == 'M' && nm < MAX;});
         m.wait(lk);
     }
 
@@ -43,7 +42,7 @@ void man_wants_to_enter(int id)
     }
 }
 
-void man_wants_to_exit()
+void man_exit_and_waits()
 {
     unique_lock<mutex> lk(e);
     --nm;
@@ -59,13 +58,7 @@ void man_wants_to_exit()
             sw.notify_one();
         }
     }
-}
 
-
-void man_waits()
-{
-    unique_lock<mutex> lk(e);
-    // sm.wait(lk, []{return turn == 'M' && nm < MAX && dm == 0;});
     sm.wait(lk);
 }
 
@@ -76,8 +69,7 @@ void man(int id)
     {
         man_wants_to_enter(id);
         this_thread::sleep_for(chrono::seconds(1));
-        man_wants_to_exit();
-        man_waits();
+        man_exit_and_waits();
     }
 }
 
@@ -87,7 +79,6 @@ void woman_wants_to_enter(int id)
     unique_lock<mutex> lk(e);
     if (turn == 'M' || nw == MAX) {
         ++dw;
-        // w.wait(lk, []{return turn == 'W' && nw < MAX;});
         w.wait(lk);
     }
 
@@ -102,7 +93,7 @@ void woman_wants_to_enter(int id)
     }
 }
 
-void woman_wants_to_exit()
+void woman_exit_and_waits()
 {
     unique_lock<mutex> lk(e);
     --nw;
@@ -118,15 +109,10 @@ void woman_wants_to_exit()
             sm.notify_one();
         }
     }
-}
 
-
-void woman_waits()
-{
-    unique_lock<mutex> lk(e);
-    // sw.wait(lk, []{return turn == 'W' && nw < MAX && dw == 0;});
     sw.wait(lk);
 }
+
 
 
 void woman(int id)
@@ -135,8 +121,7 @@ void woman(int id)
     {
         woman_wants_to_enter(id);
         this_thread::sleep_for(chrono::seconds(1));
-        woman_wants_to_exit();
-        woman_waits();
+        woman_exit_and_waits();
     }
 }
 
