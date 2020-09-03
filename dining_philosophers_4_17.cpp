@@ -8,8 +8,8 @@
 
 using namespace std;
 /*                          Invariant
-    I: eating[i] == T -> (eating[(i + 1 + N) % N] == F && 
-                          eating[(i - 1 + N) % N] == F)
+    I: eating[i] == T -> (eating[(i + 1) % N] == F && 
+                          eating[(i - 1) % N] == F)
 */
 
 const int N          = 5;  // philosophers count
@@ -45,8 +45,8 @@ void take_forks(int i)
 {
     unique_lock<mutex> lk(e);
     wait_for_forks.wait(lk, [i] {
-        return eating[(i + 1 + N) % N] == false &&
-               eating[(i - 1 + N) % N] == false;
+        return eating[(i + 1) % N] == false &&
+               eating[(i - 1) % N] == false;
         }
     );
 
