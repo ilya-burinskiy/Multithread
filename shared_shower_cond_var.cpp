@@ -7,127 +7,47 @@
 
 using namespace std;
 
-char turn;
-const int MAX = 2;
-const int N   = 7;
-const int M   = N / 2 + N % 2;
-const int W   = N / 2;
+/**
+ * nm = number of men in shower
+ * nw = number of women in shower
+ *                  
+ *                          Invariant
+ * I: (nm == 0 || turn == 'M') && (nw == 0 || turn == 'W') :=
+ *    (nm == 0 && nw == 0) || (nm == 0 && turn == 'W') ||
+ *    (nw == 0 && turn == 'M')
+ */
 
-int nm = 0;
-int dm = 0;
-int dsm = 0;
-int nw = 0;
-int dw = 0;
-int dsw = 0;
+const int N = 7;
+const int MAX = 3;
+const int M = N / 2 + N % 2;
+const int W = N / 2;
+char turn = 'W';
 
-mutex e;
-condition_variable m, w, sm, sw;
+mutex mut;
+condition_variable mqueue;      // men's shower queue
+condition_variable wqueue;      // women's shower queue 
+condition_variable smqueue;     // men's after shower queue
+condition_variable swqueue;     // women's after shower queue
 
-void man_wants_to_enter(int id)
-{
-    unique_lock<mutex> lk(e);
-    if (turn == 'W' || nm == MAX) {
-        ++dm;
-        m.wait(lk);
-    }
+bool can_leave_mqueue = true;
+bool can_leave_wqueue = true;
+bool can_leave_smqueue = false;
+bool can_leave_swqueue = false;
+int m_didnt_have_shower = M;
+int w_didnt_have_shower = W;
+int m_in_shower = 0;
+int w_in_shower = 0;
 
-    ++nm;
-    cout << "nm: " << nm << " nw: " << nw << " id: " << id << endl;
-    if (dm > 0 && nm < MAX) {
-        --dm;
-        m.notify_one();
-    } else if (dsm > 0 && nm < MAX) {
-        --dsm;
-        sm.notify_one();
-    }
-}
+void man(int i);
+void m_enteres_shower(int i);
+void m_leaves_shower(int i);
 
-void man_exit_and_waits()
-{
-    unique_lock<mutex> lk(e);
-    --nm;
-    ++dsm;
-
-    if (nm == 0) {
-        turn = 'W';
-        if (dw > 0) {
-            --dw;
-            w.notify_one();
-        } else if (dsw > 0) {
-            --dsw;
-            sw.notify_one();
-        }
-    }
-
-    sm.wait(lk);
-}
-
-
-void man(int id)
-{
-    while (true)
-    {
-        man_wants_to_enter(id);
-        this_thread::sleep_for(chrono::seconds(1));
-        man_exit_and_waits();
-    }
-}
-
-
-void woman_wants_to_enter(int id)
-{
-    unique_lock<mutex> lk(e);
-    if (turn == 'M' || nw == MAX) {
-        ++dw;
-        w.wait(lk);
-    }
-
-    ++nw;
-    cout << "nm: " << nm << " nw: " << nw << " id: " << id << endl;
-    if (dw > 0 && nw < MAX) {
-        --dw;
-        w.notify_one();
-    } else if (dsw > 0 && nw < MAX) {
-        --dsw;
-        sw.notify_one();
-    }
-}
-
-void woman_exit_and_waits()
-{
-    unique_lock<mutex> lk(e);
-    --nw;
-    ++dsw;
-
-    if (nw == 0) {
-        turn = 'M';
-        if (dm > 0) {
-            --dm;
-            m.notify_one();
-        } else if (dsm > 0) {
-            --dsm;
-            sm.notify_one();
-        }
-    }
-
-    sw.wait(lk);
-}
-
-
-
-void woman(int id)
-{
-    while (true)
-    {
-        woman_wants_to_enter(id);
-        this_thread::sleep_for(chrono::seconds(1));
-        woman_exit_and_waits();
-    }
-}
+void woman(int i);
+void w_enteres_shower(int i);
+void w_leaves_shower(int i);
 
 int main()
 {
-    turn = ((rand() % 2) % 2 == 0) ? 'M' : 'W';
     list<thread> threads;
     int i;
     for (i = 0; i < N; i++) {
@@ -139,4 +59,120 @@ int main()
 
     for (auto& t: threads)
         t.join();
+}
+
+
+void man(int i)
+{
+    while (true)
+    {
+        m_enteres_shower(i);
+        this_thread::sleep_for(chrono::seconds(1));
+        m_leaves_shower(i);
+    }
+}
+
+void m_enteres_shower(int i)
+{
+    unique_lock<mutex> lk(mut);
+    mqueue.wait(lk, [] {
+            return turn == 'M' && can_leave_mqueue;
+        }
+    );
+
+    ++m_in_shower;
+    --m_didnt_have_shower;
+
+    cout << "nm: " << m_in_shower << " nw: " << w_in_shower << " id: " << i << endl;
+
+    if (m_in_shower == MAX) {
+        can_leave_mqueue = false;
+    } else if (m_didnt_have_shower > 0) {
+        mqueue.notify_all();
+    } else {
+        can_leave_smqueue = true;
+        smqueue.notify_all();
+    }
+}
+
+void m_leaves_shower(int i)
+{
+    unique_lock<mutex> lk(mut);
+    --m_in_shower;
+
+    if (m_in_shower == 0) {
+        turn = 'W';
+        can_leave_wqueue = true;
+        if (w_didnt_have_shower > 0) {
+            wqueue.notify_all();
+        } else {
+            can_leave_swqueue = true;
+            swqueue.notify_all();
+        }
+    }
+
+    smqueue.wait(lk, [] {
+            return turn == 'M' && can_leave_smqueue;
+        }
+    );
+
+    ++m_didnt_have_shower;
+}
+
+
+void woman(int i)
+{
+    while (true)
+    {
+        w_enteres_shower(i);
+        this_thread::sleep_for(chrono::seconds(1));
+        w_leaves_shower(i);
+    }
+}
+
+void w_enteres_shower(int i)
+{
+    unique_lock<mutex> lk(mut);
+    wqueue.wait(lk, [] {
+            return turn == 'W' && can_leave_wqueue;
+        }
+    );
+
+    ++w_in_shower;
+    --w_didnt_have_shower;
+
+    cout << "nm: " << m_in_shower << " nw: " << w_in_shower << " id: " << i << endl;
+
+    if (w_in_shower == MAX) {
+        can_leave_wqueue = false;
+    } else if (w_didnt_have_shower > 0) {
+        wqueue.notify_all();
+    } else {
+        can_leave_swqueue = true;
+        swqueue.notify_all();
+    }
+}
+
+void w_leaves_shower(int i) 
+{
+    unique_lock<mutex> lk(mut);
+    --w_in_shower;
+
+    if (w_in_shower == 0) {
+        turn = 'M';
+        can_leave_mqueue = true;
+        if (m_didnt_have_shower > 0) {
+            mqueue.notify_all();
+        } else {
+            can_leave_smqueue = true;
+            smqueue.notify_all();
+        }
+    }
+
+    swqueue.wait(lk, [] {
+            return turn == 'W' && can_leave_swqueue;
+        }
+    );
+
+    ++w_didnt_have_shower;
 }
